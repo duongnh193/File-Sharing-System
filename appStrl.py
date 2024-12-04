@@ -88,6 +88,11 @@ def login():
             st.session_state["logged_in"] = True
             st.session_state["username"] = username
             st.session_state["welcome_message"] = True
+            st.success("Đăng nhập thành công!")
+            time.sleep(0.5)
+            st.rerun()
+        elif not username or not password:
+            st.warning("Vui lòng điền tên đăng nhập và mật khẩu.")
         else:
             st.error("Sai tên đăng nhập hoặc mật khẩu!")
 
@@ -95,19 +100,21 @@ def logout():
     st.session_state["logged_in"] = False
     st.session_state["username"] = None
     st.session_state["logout_message"] = True
+    st.rerun()
 
 PERMISSION_FILE = "permissions.json"
 
 #load json
 def load_permissions():
-    if not os.path.exists(PERMISSION_FILE):
+    try:
+        with open("permissions.json", "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
         return {}
-    with open(PERMISSION_FILE, "r") as f:
-        return json.load(f)
 
 # save json   
 def save_permissions(permissions):
-    with open(PERMISSION_FILE, "w") as f:
+    with open("permissions.json", "w") as f:
         json.dump(permissions, f, indent=4)
 
 # update json file
@@ -115,11 +122,34 @@ def update_file_permission(username, file_name, is_public):
     permissions = load_permissions()
     if username not in permissions:
         permissions[username] = {}
-    permissions[username][file_name] = {
-        "is_public": is_public,
-        "requests": []
-    }
+    if file_name not in permissions[username]:
+        permissions[username][file_name] = {
+            "is_public": is_public,
+            "allowed_users": [],  
+            "requests": []       
+        }
+    else:
+        permissions[username][file_name]["is_public"] = is_public
+    if "allowed_users" not in permissions[username][file_name]:
+            permissions[username][file_name]["allowed_users"] = []
     save_permissions(permissions)
+
+# check request
+def handle_permission_request(file_name, requester):
+    # check allow list
+    permissions = load_permissions()
+    user_permissions = permissions.get(st.session_state["username"], {})
+    
+    if file_name in user_permissions:
+        file_data = user_permissions[file_name]
+        if requester in file_data["requests"]:
+            file_data["allowed_users"].append(requester)
+            file_data["requests"].remove(requester) 
+            save_permissions(permissions)
+        else:
+            st.error(f"{requester} không có yêu cầu cấp quyền đối với file '{file_name}'.")
+    else:
+        st.error(f"File '{file_name}' không tồn tại trong danh sách của bạn.")
 
 # save file uploaded
 def save_uploaded_file(uploaded_file):
@@ -129,22 +159,20 @@ def save_uploaded_file(uploaded_file):
 
     file_path = os.path.join(user_folder, uploaded_file.name)
     
-    # Lưu file vào thư mục người dùng
     with open(file_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     
-    # Hỏi quyền của file (công khai hay bị hạn chế)
     is_public = st.checkbox("Cho phép tải file này công khai", value=True)
 
-    # Cập nhật quyền vào JSON
+    # update permisssion in json
     permissions = load_permissions()
     username = st.session_state["username"]
     if username not in permissions:
         permissions[username] = {}
     
-    # Lưu thông tin file vào JSON
     permissions[username][uploaded_file.name] = {
         "is_public": is_public,
+        "allowed_users": [],  
         "requests": []
     }
     save_permissions(permissions)
@@ -186,7 +214,7 @@ def main():
 
     if st.session_state.get("logout_message"):
         st.success("Đăng xuất thành công!")
-        time.sleep(0.3)
+        time.sleep(0.5)
         st.session_state["logout_message"] = False
         st.rerun()
 
@@ -208,7 +236,7 @@ def main():
             st.subheader("Tải xuống file")
             permissions = load_permissions()
 
-            # Lấy danh sách người dùng khác
+            # get user list
             user_folders = [f for f in os.listdir(UPLOAD_FOLDER) if os.path.isdir(os.path.join(UPLOAD_FOLDER, f))]
             if st.session_state["username"] in user_folders:
                 user_folders.remove(st.session_state["username"])
@@ -226,7 +254,26 @@ def main():
             if user_files:
                 for file_name in user_files:
                     file_permission = permissions.get(selected_user, {}).get(file_name, {})
-                    if file_permission.get("is_public", True):
+                    
+                    # Kiểm tra quyền của file
+                    allowed_users = file_permission.get("allowed_users", [])
+                    if file_permission.get("is_public", False):  
+                        st.markdown(
+                            f"<span style='color: green;'>File (Công khai):</span> {file_name}",
+                            unsafe_allow_html=True,
+                        )
+                        file_path = os.path.join(user_folder_path, file_name)
+                        with open(file_path, "rb") as file:
+                            st.download_button(
+                                label="Tải file về",
+                                data=file,
+                                file_name=file_name
+                            )
+                    elif st.session_state["username"] in file_permission.get("allowed_users", []):
+                        st.markdown(
+                            f"<span style='color: red;'>File (Được cấp quyền):</span> {file_name}",
+                            unsafe_allow_html=True,
+                        )
                         st.write(f"File: {file_name}")
                         file_path = os.path.join(user_folder_path, file_name)
                         with open(file_path, "rb") as file:
@@ -282,6 +329,8 @@ def main():
             st.subheader("Các yêu cầu cấp quyền cho file của bạn")
             permissions = load_permissions()
             user_permissions = permissions.get(st.session_state["username"], {})
+
+            # Duyệt qua các file của người dùng và kiểm tra yêu cầu cấp quyền
             for file_name, file_data in user_permissions.items():
                 if file_data["requests"]:
                     st.write(f"File: {file_name}")
@@ -289,12 +338,11 @@ def main():
                     for requester in file_data["requests"]:
                         st.write(f"- {requester}")
                         if st.button(f"Cấp quyền cho {requester}", key=f"{file_name}_{requester}"):
-                            file_data["requests"].remove(requester)
-                            file_data["is_public"] = True
-                            save_permissions(permissions)
-                            st.success(f"Đã cấp quyền cho {requester} tải file '{file_name}'!")
-
-
+                            handle_permission_request(file_name, requester)
+                            success_message = st.empty()
+                            success_message.success(f"Đã cấp quyền cho {requester} tải file '{file_name}'!")
+                            time.sleep(1)
+                            success_message.empty()
     else:
         menu = st.radio("Chọn", ["Đăng nhập", "Đăng ký"], horizontal=True)
         if menu == "Đăng nhập":

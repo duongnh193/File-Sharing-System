@@ -1,25 +1,49 @@
 {
     "hai": {
-        "HW6.ipynb": {
-            "is_public": true,
+        "houses_analysis.ipynb": {
+            "is_public": false,
+            "allowed_users": [
+                "duong"
+            ],
             "requests": []
+        },
+        "PKA_Distributed_System_F24_01.pdf": {
+            "is_public": false,
+            "requests": [],
+            "allowed_users": []
         }
     },
     "duong": {
+        "Screenshot from 2024-12-03 19-31-42.png": {
+            "is_public": true,
+            "allowed_users": [],
+            "requests": []
+        },
+        "Report_PTTKPM.pdf": {
+            "is_public": false,
+            "allowed_users": [
+                "hai",
+                "top1sv"
+            ],
+            "requests": []
+        },
+        "mediapipe_face_landmark_fullsize.png": {
+            "is_public": true,
+            "requests": [],
+            "allowed_users": []
+        },
         "inventoryitem.h": {
-            "is_public": true,
-            "requests": []
+            "is_public": false,
+            "requests": [],
+            "allowed_users": [
+                "top1sv"
+            ]
         },
-        "NLPreport.pdf": {
-            "is_public": true,
-            "requests": []
-        },
-        "l1.jpeg": {
-            "is_public": true,
-            "requests": []
-        },
-        "houses_analysis.ipynb": {
-            "is_public": true,
+        "Multiple choice.pdf": {
+            "is_public": false,
+            "allowed_users": [
+                "top1sv"
+            ],
             "requests": []
         }
     }
