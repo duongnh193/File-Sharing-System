@@ -1,0 +1,8 @@
+[theme]
+base="light"  # Thay thành "light" nếu muốn theme sáng
+primaryColor="#FF7D00"  # Màu chính của giao diện
+backgroundColor="#1E1E1E"  # Màu nền tổng thể
+secondaryBackgroundColor="#313131"  # Màu nền phụ (cho sidebar)
+textColor="#FFFFFF"  # Màu chữ chính
+font="sans serif"  # Font mặc định; có thể chọn "monospace" hoặc "serif"
+
